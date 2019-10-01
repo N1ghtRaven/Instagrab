@@ -1,12 +1,13 @@
 package main
 
 import (
-	"encoding/json"
 	"flag"
 	"fmt"
+	"os"
+	"io"
 	"io/ioutil"
 	"net/http"
-	"os"
+	"encoding/json"
 	"regexp"
 )
 
@@ -28,6 +29,9 @@ type Graphql struct {
 
 type ShortcodeMedia struct {
 	Shortcode             string                `json:"shortcode"`
+	Dimensions            Dimensions            `json:"dimensions"`
+	IsVideo               bool                  `json:"is_video"`
+	DisplayURL            string                `json:"display_url"`
 	EdgeSidecarToChildren EdgeSidecarToChildren `json:"edge_sidecar_to_children"`
 }
 
@@ -64,7 +68,11 @@ func main() {
 			*url = "https://www.instagram.com/p/" + *shortcode
 		}
 
-		resp, _ := http.Get(*url)
+		resp, err := http.Get(*url)
+		if err != io.EOF {
+			fmt.Println("Error: Network error.")
+			return
+		}
 		body, _ := ioutil.ReadAll(resp.Body)
 
 		pattern := regexp.MustCompile("_sharedData = {.*}")
@@ -76,21 +84,43 @@ func main() {
 
 		shortcode := instruct.EntryData.PostPage[0].Graphql.ShortcodeMedia
 		if *onlyUrl {
+			if shortcode.EdgeSidecarToChildren.Edges == nil {
+				fmt.Println(shortcode.DisplayURL)
+				return
+			}
+
 			for _, edge := range shortcode.EdgeSidecarToChildren.Edges {
 				fmt.Println(edge.Node.DisplayURL)
 			}
 			return
 		}
 
+		if shortcode.EdgeSidecarToChildren.Edges == nil {
+			resp, err := http.Get(shortcode.DisplayURL)
+			if err != io.EOF {
+				fmt.Println("Error: Network error.")
+				return
+			}
+			body, _ := ioutil.ReadAll(resp.Body)
+
+			ext := "jpg"
+			if shortcode.IsVideo {
+				ext = "mp4"
+			}
+
+			filename := fmt.Sprintf("%s__%d_%d.%s", shortcode.Shortcode, shortcode.Dimensions.Height, shortcode.Dimensions.Width, ext)
+			ioutil.WriteFile(filename, body, 0644)
+			return
+		}
+
 		os.Mkdir(shortcode.Shortcode, os.ModePerm)
 		for _, edge := range shortcode.EdgeSidecarToChildren.Edges {
-
-			resp, err := http.Get(edge.Node.DisplayURL)
-			if err != nil {
-				panic(err)
+			resp, _ := http.Get(edge.Node.DisplayURL)
+			if err != io.EOF {
+				fmt.Println("Error: Network error.")
+				return
 			}
-			defer resp.Body.Close()
-			body, err := ioutil.ReadAll(resp.Body)
+			body, _ := ioutil.ReadAll(resp.Body)
 
 			ext := "jpg"
 			if edge.Node.IsVideo {
