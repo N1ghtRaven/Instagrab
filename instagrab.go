@@ -4,7 +4,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"io"
 	"io/ioutil"
 	"net/http"
 	"encoding/json"
@@ -69,10 +68,11 @@ func main() {
 		}
 
 		resp, err := http.Get(*url)
-		if err != io.EOF {
-			fmt.Println("Error: Network error.")
+		if err != nil {
+			fmt.Println("Error[1]: Network error.")
 			return
 		}
+
 		body, _ := ioutil.ReadAll(resp.Body)
 
 		pattern := regexp.MustCompile("_sharedData = {.*}")
@@ -97,8 +97,8 @@ func main() {
 
 		if shortcode.EdgeSidecarToChildren.Edges == nil {
 			resp, err := http.Get(shortcode.DisplayURL)
-			if err != io.EOF {
-				fmt.Println("Error: Network error.")
+			if err != nil {
+				fmt.Println("Error[2]: Network error.")
 				return
 			}
 			body, _ := ioutil.ReadAll(resp.Body)
@@ -115,9 +115,9 @@ func main() {
 
 		os.Mkdir(shortcode.Shortcode, os.ModePerm)
 		for _, edge := range shortcode.EdgeSidecarToChildren.Edges {
-			resp, _ := http.Get(edge.Node.DisplayURL)
-			if err != io.EOF {
-				fmt.Println("Error: Network error.")
+			resp, err := http.Get(edge.Node.DisplayURL)
+			if err != nil {
+				fmt.Println("Error[2]: Network error.")
 				return
 			}
 			body, _ := ioutil.ReadAll(resp.Body)
