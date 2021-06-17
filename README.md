@@ -1,21 +1,14 @@
 # Instagrab
 
+Now doesn't not work
+
 Little utility for download photo and video from social media `Instagram.com` in max direction.
 
 ## Setup
 
-### Dependencies
-
-```sh
-$ sudo apt-get update && sudo apt-get upgrade
-$ sudo apt-get install golang-go
-$ sudo apt-get install git
-```
-
 ### Build
 
 ```sh
-$ git clone https://gitlab.com/N1ghtRaven/instagrab.git
 $ go build instagrab.go
 ```
 
